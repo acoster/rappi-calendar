@@ -13,12 +13,12 @@ local _replacements_for_mondays = [
 ];
 
 local _mondays = {
-  dates: ['every Monday starting first Monday of January 2026'] + _replacements_for_mondays,
+  dates: ['every Monday'] + _replacements_for_mondays,
   exceptions: _bank_holidays,
 };
 
 local _thursdays = {
-  dates: ['every Thursday after 2026-01-01'],
+  dates: ['every Thursday'],
   exceptions: _bank_holidays,
 };
 
@@ -35,7 +35,11 @@ local OrganicSchedule(week_day, exceptions=[]) = {
   exceptions: exceptions,
 };
 
-local _organic_tuesday = organic: OrganicSchedule('Tuesday', _replacements_for_mondays + _bank_holidays);
+local _organic_tuesday = OrganicSchedule('Tuesday', _replacements_for_mondays + _bank_holidays);
+
+local SingleDate(date) = {
+  dates: [date],
+};
 
 {
   start_date: '2026-01-01',
@@ -45,13 +49,40 @@ local _organic_tuesday = organic: OrganicSchedule('Tuesday', _replacements_for_m
       waste: _mondays,
       cardboard: EveryFourth('Wednesday', '2026-01-07'),
       paper: EveryFourth('Wednesday', '2026-01-14'),
-      organic: _organic_tuesday
-    }.
+      organic: _organic_tuesday,
+      metal: SingleDate('2026-12-08'),
+    },
     '2': {
       waste: _mondays,
       cardboard: EveryFourth('Wednesday', '2026-01-07'),
       paper: EveryFourth('Wednesday', '2026-01-14'),
-      organic: _organic_tuesday
+      organic: _organic_tuesday,
+      metal: SingleDate('2026-12-11'),
+    },
+    '3': {
+      waste: {
+        dates: [
+          'Every Monday and Thursday',
+          '2026-05-15',  // Ersatzdatum für Auffahrt
+          '2026-05-26',  // Ersatzdatum für Pfingstmontag
+        ],
+        exceptions: _bank_holidays,
+      },
+      cardboard: {
+        dates: [
+          'Every other Tuesday starting 2026-01-14',
+          '2026-09-30',
+        ],
+        exceptions: ['2026-09-23'],
+        organic: _organic_tuesday,
+        metal: SingleDate('2026-12-08'),
+      },
+    },
+    '4': {
+      waste: _mondays,
+      cardboard: EveryFourth('Wednesday', '2026-01-07'),
+      organic: _organic_tuesday,
+      metal: SingleDate('2026-12-11'),
     },
   },
 }
