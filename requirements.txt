@@ -1,2 +1,4 @@
 fastapi~=0.128.0
 pydantic
+python-dateutil
+recurrent

@@ -1,12 +1,10 @@
-from pydantic import BaseModel, BeforeValidator
 from datetime import date, datetime
 from enum import StrEnum
-import _jsonnet
-
-from recurrent.event_parser import RecurringEvent
-from dateutil import rrule
-
 from typing import List, Union, Mapping, Optional, Annotated
+
+from dateutil import rrule
+from pydantic import BaseModel, BeforeValidator
+from recurrent.event_parser import RecurringEvent
 
 
 def ensure_string_entry(d: Union[str, date]) -> str:
@@ -40,38 +38,29 @@ class ConfigModel(BaseModel):
 
 class Zone:
   def __init__(self, schedules: Mapping[CollectionType, Schedule], start_date: date, end_date: date):
-    self.schedules = schedules
-
-    self.rule_sets = {}
     rule_parser = RecurringEvent()
+
+    self.dates = {}
 
     start_dt = datetime(start_date.year, start_date.month, start_date.day)
     end_dt = datetime(end_date.year, end_date.month, end_date.day)
 
     for collection_type, schedule in schedules.items():
       rule_set = rrule.rruleset()
-      for entry in (rule_parser.parse(d) for d in schedule.dates):
-        if rule_parser.is_recurring:
-          rule = rrule.rrulestr(entry, dtstart=start_date)
-          rule_set.rrule(rule)
-        else:
-          rule_set.rdate(datetime(entry.year, entry.month, entry.day))
 
       for e in (rule_parser.parse(d) for d in schedule.exceptions):
         if rule_parser.is_recurring:
-          rule = rrule.rrulestr(e, dtstart=start_date)
+          rule = rrule.rrulestr(e)
           for d in rule.between(start_dt, end_dt, inc=True):
             rule_set.exdate(d)
         else:
           rule_set.exdate(datetime(e.year, e.month, e.day))
 
-      print(collection_type)
-      print(rule_set.between(start_dt, end_dt, inc=True))
+      for entry in (rule_parser.parse(d) for d in schedule.dates):
+        if rule_parser.is_recurring:
+          rule = rrule.rrulestr(entry)
+          rule_set.rrule(rule)
+        else:
+          rule_set.rdate(datetime(entry.year, entry.month, entry.day))
 
-
-cfg_js = _jsonnet.evaluate_file('data/config.jsonnet')
-cfg_model = ConfigModel.model_validate_json(cfg_js)
-
-z = Zone(cfg_model.zones['2'], date(2026, 4, 1), date(2026, 4, 30))
-
-
+      self.dates[collection_type] = [date(d.year, d.month, d.day) for d in rule_set.between(start_dt, end_dt, inc=True)]
