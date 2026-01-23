@@ -1,0 +1,14 @@
+[project]
+name = "rapperswil"
+version = "0.1.0"
+description = "Little API to generate calendars for Rapperswil-Jona"
+requires-python = ">=3.13"
+dependencies = [
+    "fastapi~=0.128.0",
+    "pydantic>=2.12.5",
+    "python-dateutil>=2.9.0.post0",
+    "recurrent>=0.4.1",
+    "uvicorn==0.40.0",
+    'jsonnet',
+    "ics>=0.7.2",
+]
