@@ -63,7 +63,7 @@ class Zone:
 
       for entry in (rule_parser.parse(d) for d in schedule.dates):
         if rule_parser.is_recurring:
-          rule = rrule.rrulestr(entry)
+          rule = rrule.rrulestr(entry, dtstart=start_dt)
           rule_set.rrule(rule)
         else:
           rule_set.rdate(datetime(entry.year, entry.month, entry.day))
