@@ -22,6 +22,11 @@ local _thursdays = {
   exceptions: _bank_holidays,
 };
 
+local MergeSchedules(r, l) = {
+  dates: std.uniq(std.sort(r.dates + l.dates)),
+  exceptions: std.uniq(std.sort(r.exceptions + l.exceptions))
+};
+
 local EveryFourth(week_day, start_date) = {
   dates: [std.format('every fourth %s starting %s', [week_day, start_date])],
 };
@@ -52,6 +57,7 @@ local SingleDate(date) = {
       organic: _organic_tuesday,
       metal: SingleDate('2026-12-08'),
     },
+    /*
     '2': {
       waste: _mondays,
       cardboard: EveryFourth('Wednesday', '2026-01-07'),
@@ -60,29 +66,37 @@ local SingleDate(date) = {
       metal: SingleDate('2026-12-11'),
     },
     '3': {
-      waste: {
-        dates: [
-          'Every Monday and Thursday',
-          '2026-05-15',  // Ersatzdatum für Auffahrt
-          '2026-05-26',  // Ersatzdatum für Pfingstmontag
-        ],
-        exceptions: _bank_holidays,
-      },
+      waste: MergeSchedules(_mondays, _thursdays),
       cardboard: {
         dates: [
           'Every other Tuesday starting 2026-01-14',
           '2026-09-30',
         ],
         exceptions: ['2026-09-23'],
-        organic: _organic_tuesday,
-        metal: SingleDate('2026-12-08'),
       },
+      organic: _organic_tuesday,
+      metal: SingleDate('2026-12-08'),
     },
     '4': {
       waste: _mondays,
       cardboard: EveryFourth('Wednesday', '2026-01-07'),
       organic: _organic_tuesday,
       metal: SingleDate('2026-12-11'),
+    },
+    '5': {
+
+    },
+    */
+  },
+  collection_settings: {
+    local _t(t) = { title: t },
+    waste: _t('General waste'),
+    organic: _t('Organic waste'),
+    paper: _t('Paper'),
+    cardboard: _t('Cardboard'),
+    metal: {
+      title: 'Metal',
+      description: 'All types of metal, without foreign substances. No electric appliances allowed.',
     },
   },
 }

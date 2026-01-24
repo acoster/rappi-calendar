@@ -11,4 +11,5 @@ dependencies = [
     "uvicorn==0.40.0",
     'jsonnet',
     "ics>=0.7.2",
+    "icalendar>=6.3.2",
 ]

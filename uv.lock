@@ -100,6 +100,19 @@ wheels = [
 ]
 
 [[package]]
+name = "icalendar"
+version = "6.3.2"
+source = { registry = "https://us-python.pkg.dev/artifact-foundry-prod/ah-3p-staging-python/simple/" }
+dependencies = [
+    { name = "python-dateutil" },
+    { name = "tzdata" },
+]
+sdist = { url = "https://us-python.pkg.dev/artifact-foundry-prod/ah-3p-staging-python/icalendar/icalendar-6.3.2.tar.gz", hash = "sha256:e0c10ecbfcebe958d33af7d491f6e6b7580d11d475f2eeb29532d0424f9110a1" }
+wheels = [
+    { url = "https://us-python.pkg.dev/artifact-foundry-prod/ah-3p-staging-python/icalendar/icalendar-6.3.2-py3-none-any.whl", hash = "sha256:d400e9c9bb8c025e5a3c77c236941bb690494be52528a0b43cc7e8b7c9505064" },
+]
+
+[[package]]
 name = "ics"
 version = "0.7.2"
 source = { registry = "https://us-python.pkg.dev/artifact-foundry-prod/ah-3p-staging-python/simple/" }
@@ -232,6 +245,7 @@ version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
     { name = "fastapi" },
+    { name = "icalendar" },
     { name = "ics" },
     { name = "jsonnet" },
     { name = "pydantic" },
@@ -243,6 +257,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "fastapi", specifier = "~=0.128.0" },
+    { name = "icalendar", specifier = ">=6.3.2" },
     { name = "ics", specifier = ">=0.7.2" },
     { name = "jsonnet" },
     { name = "pydantic", specifier = ">=2.12.5" },
