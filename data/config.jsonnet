@@ -12,19 +12,18 @@ local _replacements_for_mondays = [
   '2026-05-26',  // Ersatzdatum für Pfingstmontag
 ];
 
+local _replacements_for_thursdays = [
+  '2026-05-14',  // Ersatzdatum für Auffahrt
+];
+
 local _mondays = {
-  dates: ['every Monday'] + _replacements_for_mondays,
+  dates: ['every Monday starting first Monday of 2026'] + _replacements_for_mondays,
   exceptions: _bank_holidays,
 };
 
 local _thursdays = {
-  dates: ['every Thursday'],
+  dates: ['every Thursday starting first Thursday of 2026'] + _replacements_for_thursdays,
   exceptions: _bank_holidays,
-};
-
-local MergeSchedules(r, l) = {
-  dates: std.uniq(std.sort(r.dates + l.dates)),
-  exceptions: std.uniq(std.sort(r.exceptions + l.exceptions))
 };
 
 local EveryFourth(week_day, start_date) = {
@@ -34,13 +33,14 @@ local EveryFourth(week_day, start_date) = {
 local OrganicSchedule(week_day, exceptions=[]) = {
   dates: [
     std.format('every other %s starting the first %s of January 2026 until March 2026', [week_day, week_day]),
-    std.format('every %s from march 2026 until december 2026', [week_day]),
+    std.format('every %s from first %s of march 2026 until december 2026', [week_day, week_day]),
     std.format('every other %s starting the first %s of December 2026 until January 2027', [week_day, week_day]),
   ],
-  exceptions: exceptions,
+  exceptions: exceptions + _bank_holidays,
 };
 
-local _organic_tuesday = OrganicSchedule('Tuesday', _replacements_for_mondays + _bank_holidays);
+local _organic_tuesday = OrganicSchedule('Tuesday', _replacements_for_mondays);
+local _organic_friday = OrganicSchedule('Friday', _replacements_for_thursdays);
 
 local SingleDate(date) = {
   dates: [date],
@@ -57,7 +57,6 @@ local SingleDate(date) = {
       organic: _organic_tuesday,
       metal: SingleDate('2026-12-08'),
     },
-    /*
     '2': {
       waste: _mondays,
       cardboard: EveryFourth('Wednesday', '2026-01-07'),
@@ -66,7 +65,11 @@ local SingleDate(date) = {
       metal: SingleDate('2026-12-11'),
     },
     '3': {
-      waste: MergeSchedules(_mondays, _thursdays),
+      waste: {
+        dates: ['Every Monday and Thursday starting 2026-01-01'] +
+                 _replacements_for_mondays + _replacements_for_thursdays,
+        exceptions: _bank_holidays,
+      },
       cardboard: {
         dates: [
           'Every other Tuesday starting 2026-01-14',
@@ -84,9 +87,33 @@ local SingleDate(date) = {
       metal: SingleDate('2026-12-11'),
     },
     '5': {
-
+      waste: _thursdays,
+      cardboard: EveryFourth('Wednesday', '2026-01-28'),
+      paper: EveryFourth('Wednesday', '2026-01-21'),
+      organic: _organic_friday,
+      metal: SingleDate('2026-12-11'),
     },
-    */
+    '6': {
+      waste: _thursdays,
+      cardboard: EveryFourth('Wednesday', '2026-01-28'),
+      paper: EveryFourth('Wednesday', '2026-01-21'),
+      organic: _organic_friday,
+      metal: SingleDate('2026-12-08'),
+    },
+    '7': {
+      waste: _thursdays,
+      cardboard: EveryFourth('Wednesday', '2026-01-14'),
+      paper: EveryFourth('Wednesday', '2026-01-07'),
+      organic: _organic_friday,
+      metal: SingleDate('2026-12-08'),
+    },
+    '8': {
+      waste: _thursdays,
+      cardboard: EveryFourth('Wednesday', '2026-01-28'),
+      paper: EveryFourth('Wednesday', '2026-01-07'),
+      organic: _organic_friday,
+      metal: SingleDate('2026-12-11'),
+    },
   },
   collection_settings: {
     local _t(t) = { title: t },

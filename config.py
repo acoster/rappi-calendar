@@ -1,16 +1,14 @@
-from datetime import date, datetime, time
+import re
+from dataclasses import dataclass
+from datetime import date, datetime, time, timedelta
 from enum import StrEnum
+from types import MappingProxyType
 from typing import List, Union, Mapping, Annotated, Optional, Literal
 
 import _jsonnet
 from dateutil import rrule
 from pydantic import BaseModel, BeforeValidator, Field, ConfigDict
 from recurrent.event_parser import RecurringEvent
-
-from dataclasses import dataclass
-from types import MappingProxyType
-
-__all__ = ['Zone', 'CollectionType', 'load_config_from_file']
 
 
 def ensure_string_entry(d: Union[str, date]) -> str:
@@ -39,10 +37,12 @@ class Schedule(BaseModel):
   exceptions: Annotated[List[str], BeforeValidator(ensure_string_list), Field(default_factory=list)]
   model_config = ConfigDict(extra='forbid', frozen=True)
 
+
 class CollectionConfig(BaseModel):
   title: str
   description: Optional[str] = ''
   model_config = ConfigDict(extra='forbid', frozen=True)
+
 
 class ConfigModel(BaseModel):
   start_date: date
@@ -51,18 +51,14 @@ class ConfigModel(BaseModel):
   collection_settings: Mapping[CollectionType, CollectionConfig] = Field(default_factory=dict)
   model_config = ConfigDict(extra='forbid', frozen=True)
 
+
+@dataclass(frozen=True)
 class ScheduleEntry:
+  dtstart: date
+  dtend: date
   rrule: Optional[str] = None
   exceptions: Optional[List[date]] = None
-  date: Optional[date] = None
 
-  def __str__(self):
-    if self.rrule:
-      exdate = ''
-      if self.exceptions:
-        exdate = f'\nEXDATE:{",".join([d.strftime("%Y%m%d") for d in self.exceptions])}'
-      return f'{self.rrule}{exdate}'
-    return str(self.date)
 
 @dataclass(frozen=True)
 class Zone:
@@ -73,47 +69,59 @@ class Zone:
     object.__setattr__(self, 'schedules', {})
 
     start_dt = datetime.combine(start_date, time.min)
-    end_dt = datetime.combine(end_date, time.min)
-    dtstart_str = start_dt.strftime("DTSTART:%Y%m%d")
+    end_dt = datetime.combine(end_date, time.max)
+    until_str = end_dt.strftime("UNTIL=%Y%m%dT%H%M%S")
 
     for collection_type, schedule in schedules.items():
-      rule_set = rrule.rruleset()
       self.schedules[collection_type] = []
-
 
       exceptions: set[date] = set()
 
+      # Builds set of exceptions
       for e in (rule_parser.parse(d) for d in schedule.exceptions):
         if rule_parser.is_recurring:
           rule = rrule.rrulestr(e, dtstart=start_dt)
           for d in rule.between(start_dt, end_dt, inc=True):
             exceptions.add(d.date())
         else:
-          exceptions.add(e)
+          exceptions.add(e.date())
 
       for entry in (rule_parser.parse(d) for d in schedule.dates):
-        schedule_entry = ScheduleEntry()
-        if rule_parser.is_recurring:
-          if 'DTSTART' not in entry:
-            entry = f'{dtstart_str}\n{entry}'
-          schedule_entry.rrule = entry
+        dtstart = start_dt.date() if rule_parser.is_recurring else entry.date()
+        entry_rrule = None
+        exdates = None
 
-          parsed_rule = rrule.rrulestr(entry, dtstart=start_dt)
-          instances = sorted([d for d in parsed_rule.between(start_dt, end_dt, inc=True)])
+        if rule_parser.is_recurring:
+          if 'DTSTART:' in entry:
+            match = re.search(r'DTSTART:(\d{8})\n?', entry)
+            dtstart = datetime.strptime(match.group(1), '%Y%m%d').date()
+            entry = entry[0:match.start()] + entry[match.end():]
+          else:
+            dtstart = start_dt.date()
+
+          # If the recurrence rule was unconstrained, make it stop at the last day of the calendar's validity.
+          if 'UNTIL' not in entry:
+            entry = f'{entry};{until_str}'
+
+          entry_rrule = entry
+
+          parsed_rule = rrule.rrulestr(entry, dtstart=dtstart)
+          instances = sorted(
+            [d.date() for d in parsed_rule.between(datetime.combine(dtstart, time.min), end_dt, inc=True)])
+
+          # Determine which exceptions (bank holidays, etc.) actually cause instances to be skipped.
           actual_exceptions = set(d for d in instances).intersection(exceptions)
           if actual_exceptions:
-            schedule_entry.exceptions = sorted(actual_exceptions)
-        else:
-          schedule_entry.date = entry.date()
-        self.schedules[collection_type].append(schedule_entry)
-      print(collection_type.value)
-      print([str(x) for x in self.schedules[collection_type]])
+            exdates = sorted(actual_exceptions)
+          entry_rrule = entry_rrule.replace('RRULE:', '').strip()
 
+        s = ScheduleEntry(dtstart=dtstart, dtend=dtstart + timedelta(days=1), rrule=entry_rrule, exceptions=exdates)
+        self.schedules[collection_type].append(s)
 
 
 class Config:
   def __init__(self, raw_config: ConfigModel):
-    self._raw_config : ConfigModel = raw_config
+    self._raw_config: ConfigModel = raw_config
     self._zones: dict[ZoneId, Zone] = {}
 
     for zone_id, zone_config in raw_config.zones.items():
@@ -144,4 +152,3 @@ class Config:
 def load_config_from_file(path: str) -> Config:
   j = _jsonnet.evaluate_file(path)
   return Config(ConfigModel.model_validate_json(j))
-

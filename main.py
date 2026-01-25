@@ -1,7 +1,7 @@
-from datetime import datetime, time
+import zoneinfo
+from datetime import datetime, date, time
 from typing import Annotated, List, Optional
 from uuid import uuid5, UUID
-import zoneinfo
 
 from fastapi import FastAPI, HTTPException, status, Query, Response
 from icalendar import Calendar, Event
@@ -13,9 +13,9 @@ UID_NAMESPACE = UUID("0b6a3d0e-6e19-4c7b-8f58-6d63b9e30a5c")
 app = FastAPI()
 
 
-def stable_event_uuid(zone: config.ZoneId, t: config.CollectionType, event_dt: datetime) -> str:
-  # Use the local date since everything is normalized to all-day.
-  name = f"{zone}:{t.value}:{event_dt.date().isoformat()}"
+def stable_event_uuid(zone: config.ZoneId, t: config.CollectionType, event_dt: date) -> str:
+  # Use the local date since everything is normalised to all-day.
+  name = f"{zone}:{t.value}:{event_dt.isoformat()}"
   return str(uuid5(UID_NAMESPACE, name))
 
 
@@ -41,6 +41,8 @@ async def root(zone: config.ZoneId,
   c = Calendar()
   c['prodid'] = '-//Rubbish collection calendar//rapperswil-api.coster.ch//'
   c['version'] = '2.0'
+  c['tzid'] = 'Europe/Zurich'
+
   for t in types:
     type_config = app_config.get_collection_config(t)
     event_title = t.value
@@ -50,16 +52,19 @@ async def root(zone: config.ZoneId,
       event_title = type_config.title
       event_description = type_config.description
 
-    for d in sorted(zones[zone].dates.get(t, [])):
+    for d in zones[zone].schedules.get(t, []):
       event = Event()
-      event['uid'] = stable_event_uuid(zone, t, d)
+      event['uid'] = stable_event_uuid(zone, t, d.dtstart)
       event['summary'] = event_title
       event.add('dtstamp', event_creation_time)
+      event.add('dtstart', d.dtstart)
+      event.add('dtend', d.dtend)
       if event_description:
         event['description'] = event_description
-      event.add('dtstart', d.date())
-
+      if d.rrule:
+        event.add('rrule', d.rrule)
+        if d.exceptions:
+          event.add('exdate', d.exceptions)
       c.add_component(event)
-
 
   return CalendarResponse(content=c.to_ical().decode('utf-8'), media_type="text/calendar")

@@ -9,7 +9,6 @@ dependencies = [
     "python-dateutil>=2.9.0.post0",
     "recurrent>=0.4.1",
     "uvicorn==0.40.0",
-    'jsonnet',
-    "ics>=0.7.2",
+    "jsonnet~=0.21.0",
     "icalendar>=6.3.2",
 ]
