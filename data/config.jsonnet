@@ -50,6 +50,9 @@ local SingleDate(date) = {
   start_date: '2026-01-01',
   end_date: '2026-12-31',
   zones: {
+    local _z = self,
+
+    // Zones 1, 2 and 4 are similar (modulo metal collection and that zone 4 has no paper collection).
     '1': {
       waste: _mondays,
       cardboard: EveryFourth('Wednesday', '2026-01-07'),
@@ -57,17 +60,17 @@ local SingleDate(date) = {
       organic: _organic_tuesday,
       metal: SingleDate('2026-12-08'),
     },
-    '2': {
-      waste: _mondays,
-      cardboard: EveryFourth('Wednesday', '2026-01-07'),
-      paper: EveryFourth('Wednesday', '2026-01-14'),
-      organic: _organic_tuesday,
+    '2': _z['1'] {
       metal: SingleDate('2026-12-11'),
     },
+    '4': _z['2'] {
+      paper: null,
+    },
+
     '3': {
       waste: {
         dates: ['Every Monday and Thursday starting 2026-01-01'] +
-                 _replacements_for_mondays + _replacements_for_thursdays,
+               _replacements_for_mondays + _replacements_for_thursdays,
         exceptions: _bank_holidays,
       },
       cardboard: {
@@ -80,12 +83,7 @@ local SingleDate(date) = {
       organic: _organic_tuesday,
       metal: SingleDate('2026-12-08'),
     },
-    '4': {
-      waste: _mondays,
-      cardboard: EveryFourth('Wednesday', '2026-01-07'),
-      organic: _organic_tuesday,
-      metal: SingleDate('2026-12-11'),
-    },
+
     '5': {
       waste: _thursdays,
       cardboard: EveryFourth('Wednesday', '2026-01-28'),
@@ -93,11 +91,7 @@ local SingleDate(date) = {
       organic: _organic_friday,
       metal: SingleDate('2026-12-11'),
     },
-    '6': {
-      waste: _thursdays,
-      cardboard: EveryFourth('Wednesday', '2026-01-28'),
-      paper: EveryFourth('Wednesday', '2026-01-21'),
-      organic: _organic_friday,
+    '6': _z['5'] {
       metal: SingleDate('2026-12-08'),
     },
     '7': {
@@ -115,6 +109,7 @@ local SingleDate(date) = {
       metal: SingleDate('2026-12-11'),
     },
   },
+
   collection_settings: {
     local _t(t) = { title: t },
     waste: _t('General waste'),

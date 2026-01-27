@@ -47,7 +47,7 @@ class CollectionConfig(BaseModel):
 class ConfigModel(BaseModel):
   start_date: date
   end_date: date
-  zones: Mapping[ZoneId, Mapping[CollectionType, Schedule]]
+  zones: Mapping[ZoneId, Mapping[CollectionType, Optional[Schedule]]]
   collection_settings: Mapping[CollectionType, CollectionConfig] = Field(default_factory=dict)
   model_config = ConfigDict(extra='forbid', frozen=True)
 
@@ -74,10 +74,11 @@ class Zone:
 
     for collection_type, schedule in schedules.items():
       self.schedules[collection_type] = []
+      if schedule is None:
+        continue
 
       exceptions: set[date] = set()
 
-      # Builds set of exceptions
       for e in (rule_parser.parse(d) for d in schedule.exceptions):
         if rule_parser.is_recurring:
           rule = rrule.rrulestr(e, dtstart=start_dt)

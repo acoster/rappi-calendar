@@ -1,70 +1,52 @@
 import zoneinfo
-from datetime import datetime, date, time
-from typing import Annotated, List, Optional
-from uuid import uuid5, UUID
+from typing import Annotated, Optional, Sequence
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException, status, Query, Response
-from icalendar import Calendar, Event
 
 import config
+from event_generation import build_calendar
 
-UID_NAMESPACE = UUID("0b6a3d0e-6e19-4c7b-8f58-6d63b9e30a5c")
-
-app = FastAPI()
-
-
-def stable_event_uuid(zone: config.ZoneId, t: config.CollectionType, event_dt: date) -> str:
-  # Use the local date since everything is normalised to all-day.
-  name = f"{zone}:{t.value}:{event_dt.isoformat()}"
-  return str(uuid5(UID_NAMESPACE, name))
-
+CALENDAR_MEDIA_TYPE = 'text/calendar'
+TZ_NAME = 'Europe/Zurich'
+TZ = zoneinfo.ZoneInfo(TZ_NAME)
 
 app_config = config.load_config_from_file('data/config.jsonnet')
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+  # Load config during startup rather than at import time.
+  app.state.config = config.load_config_from_file("data/config.jsonnet")
+  yield
+
 
 class CalendarResponse(Response):
-  media_type = "text/calendar"
+  media_type = CALENDAR_MEDIA_TYPE
 
+
+def _resolve_collection_types(types: Optional[Sequence[config.CollectionType]], ) -> Sequence[config.CollectionType]:
+  if types is not None:
+    return types
+  return list(config.CollectionType)
+
+
+app = FastAPI(lifespan=lifespan)
 
 @app.get('/calendars/waste/{zone}', response_class=CalendarResponse)
-async def root(zone: config.ZoneId,
-               types: Annotated[Optional[List[config.CollectionType]], Query()] = None) -> CalendarResponse:
-  zones = app_config.zones
-  if zone not in zones:
+async def waste_calendars(zone: config.ZoneId, collection_types: Annotated[
+  Optional[Sequence[config.CollectionType]], Query()] = None) -> CalendarResponse:
+  """
+  Fetches the waste collection calendars for a specified zone and types.
+
+  This endpoint generates a calendar containing waste collection schedules
+  for the given zone. If no collection types are specified, calendars for
+  all available collection types are included by default. The calendar is
+  returned in the iCalendar format.
+  """
+  app_config: config.Config = app.state.config
+
+  if zone not in app_config.zones:
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Zone not found")
 
-  if types is None:
-    types = [t for t in config.CollectionType]
-  tz = zoneinfo.ZoneInfo('Europe/Zurich')
-
-  event_creation_time = datetime.combine(app_config.start_date, time.min, tzinfo=tz)
-  c = Calendar()
-  c['prodid'] = '-//Rubbish collection calendar//rapperswil-api.coster.ch//'
-  c['version'] = '2.0'
-  c['tzid'] = 'Europe/Zurich'
-
-  for t in types:
-    type_config = app_config.get_collection_config(t)
-    event_title = t.value
-    event_description = None
-
-    if type_config is not None:
-      event_title = type_config.title
-      event_description = type_config.description
-
-    for d in zones[zone].schedules.get(t, []):
-      event = Event()
-      event['uid'] = stable_event_uuid(zone, t, d.dtstart)
-      event['summary'] = event_title
-      event.add('dtstamp', event_creation_time)
-      event.add('dtstart', d.dtstart)
-      event.add('dtend', d.dtend)
-      if event_description:
-        event['description'] = event_description
-      if d.rrule:
-        event.add('rrule', d.rrule)
-        if d.exceptions:
-          event.add('exdate', d.exceptions)
-      c.add_component(event)
-
-  return CalendarResponse(content=c.to_ical().decode('utf-8'), media_type="text/calendar")
+  calendar = build_calendar(app_config, zone, _resolve_collection_types(collection_types), TZ)
+  return CalendarResponse(content=calendar.to_ical().decode('utf-8'))
