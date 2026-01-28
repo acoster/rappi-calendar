@@ -11,4 +11,15 @@ dependencies = [
     "uvicorn==0.40.0",
     "jsonnet~=0.21.0",
     "icalendar>=6.3.2",
+    "pytest>=9.0.2",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.2",
+]
+
+[tool.pytest.ini_options]
+filterwarnings = [
+    "ignore:.+parsedatetime.VERSION_CONTEXT_STYLE:PendingDeprecationWarning"
 ]

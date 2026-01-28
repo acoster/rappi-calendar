@@ -2,7 +2,6 @@ from datetime import date, datetime, time
 from typing import Sequence
 from uuid import uuid5, UUID
 from zoneinfo import ZoneInfo
-
 from icalendar import Calendar, Event
 
 from config import ZoneId, CollectionType, Config
